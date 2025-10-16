@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>EATWIT — Dark Futuristic POS</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#020306;
+    --panel:#08121a;
+    --glass:rgba(255,255,255,0.03);
+    --accent:#00f0ff;
+    --accent2:#7b61ff;
+    --muted:rgba(255,255,255,0.7);
+    --neon:0 0 18px rgba(0,240,255,0.12), 0 6px 30px rgba(123,97,255,0.06);
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#010205 0%, #06101a 60%);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:var(--muted)}
+  .wrap{max-width:1200px;margin:18px auto;padding:18px;display:grid;grid-template-rows:auto 1fr;gap:18px}
+
+  /* banner */
+  .banner{width:100%;height:160px;border-radius:14px;overflow:hidden;box-shadow:var(--neon);border:1px solid rgba(255,255,255,0.03);}
+  .banner img{width:100%;height:100%;object-fit:cover;display:block}
+
+  /* layout */
+  .main{display:grid;grid-template-columns:1fr 380px;gap:18px}
+  .panel{background:linear-gradient(180deg,var(--panel),rgba(6,12,18,0.7));border-radius:var(--radius);padding:14px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 8px 30px rgba(2,8,20,0.6)}
+
+  /* menu area */
+  .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+  .item{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;align-items:center;cursor:pointer;transition:transform .12s ease, box-shadow .12s ease}
+  .item:hover{transform:translateY(-6px);box-shadow:0 10px 30px rgba(0,240,255,0.04)}
+  .item img{width:100%;height:96px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.03)}
+  .iname{font-family:Orbitron;font-size:14px;color:var(--accent);text-align:center}
+  .iprice{font-weight:700;color:var(--accent2)}
+
+  /* cart / receipt */
+  .receipt{display:flex;flex-direction:column;gap:12px}
+  .cart-list{max-height:48vh;overflow:auto;padding:6px;border-radius:8px;background:linear-gradient(180deg,transparent,rgba(255,255,255,0.01))}
+  .cart-row{display:flex;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px dashed rgba(255,255,255,0.03)}
+  .cart-row .left{display:flex;gap:10px;align-items:center}
+  .cart-row img{width:40px;height:40px;object-fit:cover;border-radius:6px}
+  .qty{background:rgba(255,255,255,0.02);padding:6px;border-radius:8px;width:54px;text-align:center}
+
+  .totals{padding:10px;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent)}
+  .totals .row{display:flex;justify-content:space-between;padding:6px 0}
+  .big{font-family:Orbitron;font-size:20px;color:var(--accent2)}
+
+  /* bayad options */
+  .bayad{display:flex;flex-direction:column;gap:8px}
+  select,input{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--muted)}
+  .actions{display:flex;gap:8px}
+  .btn{padding:10px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
+  .btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#041016}
+  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+
+  /* small helpers */
+  .muted{color:rgba(255,255,255,0.45);font-size:13px}
+
+  /* printable receipt styling */
+  @media print{
+    body *{visibility:hidden}
+    #printable, #printable *{visibility:visible}
+    #printable{position:fixed;left:0;top:0;width:100%}
+  }
+
+  /* receipt paper small style for visual */
+  .rcpt{background:#fff;color:#000;padding:12px;border-radius:6px;font-family:monospace}
+  .rcpt .h{font-weight:700;text-align:center}
+  .rcpt .line{border-top:1px dashed rgba(0,0,0,0.2);margin:8px 0}
+  .rcpt .right{float:right}
+
+  @media (max-width:980px){.main{grid-template-columns:1fr} .banner{height:120px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- banner image file: place eatwitbanner.png in same repo root or assets and it will fit here -->
+  <div class="banner"><img src="eatwitbanner.png" alt="banner"></div>
+
+  <div class="main">
+    <section class="panel">
+      <div class="items" id="items">
+        <!-- items injected by JS: no "Menu" label, just the choices -->
+      </div>
+    </section>
+
+    <aside class="panel receipt">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-family:Orbitron;color:var(--accent);">Order</div>
+          <div class="muted" id="clock">--:--</div>
+        </div>
+        <div class="cart-list" id="cart"></div>
+      </div>
+
+      <div class="totals">
+        <div class="row"><div class="muted">Subtotal</div><div id="subtotal">₱0.00</div></div>
+        <div class="row"><div class="muted">Discount</div><div id="discount">₱0.00</div></div>
+        <div class="row" style="border-top:1px solid rgba(255,255,255,0.03);padding-top:8px"><div class="muted">Total</div><div class="big" id="total">₱0.00</div></div>
+      </div>
+
+      <div class="bayad">
+        <label class="muted">Bayad options</label>
+        <select id="bayadSelect">
+          <option value="cash">Cash</option>
+          <option value="ewallet">E-Wallet</option>
+          <option value="card">Bank / Credit Card</option>
+        </select>
+
+        <div id="ewalletTypes" style="display:none">
+          <select id="ewalletSelect">
+            <option value="gcash">GCash</option>
+            <option value="maya">Maya</option>
+          </select>
+        </div>
+
+        <div id="cashControls">
+          <label class="muted">Cash given (₱)</label>
+          <input type="number" id="cashGiven" placeholder="0.00" min="0" step="0.01">
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-primary" id="completeBtn">Complete Sale</button>
+            <button class="btn btn-ghost" id="clearBtn">Clear</button>
+            <button class="btn btn-ghost" id="printBtn">Print Receipt</button>
+          </div>
+        </div>
+
+        <div id="nonCashInfo" style="display:none">
+          <label class="muted">Reference / Notes</label>
+          <input id="refInput" placeholder="Transaction ref or notes">
+        </div>
+
+      </div>
+
+      <!-- printable receipt container (hidden from normal view) -->
+      <div id="printArea" style="display:none">
+        <div id="printable" class="rcpt" role="document"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+// Sample items - you can change or replace these easily
+const ITEMS = [
+  {id:'b1',name:'Beef Pares',price:95,image:'https://images.unsplash.com/photo-1604908177225-cf9d3f9a2ffb?q=80&w=800&auto=format&fit=crop'},
+  {id:'b2',name:'Sizzling Sisig',price:120,image:'https://images.unsplash.com/photo-1601050690598-9f5d0f0e3b7c?q=80&w=800&auto=format&fit=crop'},
+  {id:'b3',name:'Tapsilog',price:85,image:'https://images.unsplash.com/photo-1617191510702-2f9b8b9b3f2a?q=80&w=800&auto=format&fit=crop'},
+  {id:'b4',name:'Pancit Canton',price:75,image:'https://images.unsplash.com/photo-1617191510369-4d0a2c1e7b5f?q=80&w=800&auto=format&fit=crop'},
+  {id:'b5',name:'Lechon Kawali',price:150,image:'https://images.unsplash.com/photo-1617191510711-9b70d3a4f9c1?q=80&w=800&auto=format&fit=crop'},
+  {id:'b6',name:'Halo-Halo',price:65,image:'https://images.unsplash.com/photo-1550686041-1b5a1f6b9f5c?q=80&w=800&auto=format&fit=crop'}
+];
+
+const itemsEl = document.getElementById('items');
+const cartEl = document.getElementById('cart');
+const subtotalEl = document.getElementById('subtotal');
+const totalEl = document.getElementById('total');
+const discountEl = document.getElementById('discount');
+const bayadSelect = document.getElementById('bayadSelect');
+const ewalletTypes = document.getElementById('ewalletTypes');
+const ewalletSelect = document.getElementById('ewalletSelect');
+const cashControls = document.getElementById('cashControls');
+const nonCashInfo = document.getElementById('nonCashInfo');
+const cashGiven = document.getElementById('cashGiven');
+const completeBtn = document.getElementById('completeBtn');
+const clearBtn = document.getElementById('clearBtn');
+const printBtn = document.getElementById('printBtn');
+const printDoc = document.getElementById('printable');
+
+let CART = [];
+let discount = 0.00;
+
+function fmt(n){ return '₱' + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function renderItems(){
+  itemsEl.innerHTML = '';
+  ITEMS.forEach(it=>{
+    const div = document.createElement('div'); div.className='item';
+    div.innerHTML = `<img src="${it.image}" alt="${it.name}"><div class="iname">${it.name}</div><div class="iprice">${fmt(it.price)}</div>`;
+    div.addEventListener('click', ()=> addToCart(it));
+    itemsEl.appendChild(div);
+  });
+}
+
+function addToCart(item){
+  const existing = CART.find(c=>c.id===item.id);
+  if(existing) existing.qty++;
+  else CART.push({id:item.id,name:item.name,price:item.price,qty:1,image:item.image});
+  renderCart();
+}
+
+function renderCart(){
+  cartEl.innerHTML='';
+  if(CART.length===0) cartEl.innerHTML = '<div class="muted" style="padding:12px;text-align:center">No items</div>';
+  CART.forEach((c,i)=>{
+    const row = document.createElement('div'); row.className='cart-row';
+    row.innerHTML = `<div class="left"><img src="${c.image}" alt=""><div><div style="font-weight:700">${c.name}</div><div class="muted">${fmt(c.price)}</div></div></div>
+                     <div style="display:flex;gap:6px;align-items:center"><div class="qty">${c.qty}</div>
+                     <div style="display:flex;flex-direction:column"><button class="btn btn-ghost" data-i="${i}" data-action="+">+</button><button class="btn btn-ghost" data-i="${i}" data-action="-">-</button></div></div>`;
+    cartEl.appendChild(row);
+  });
+  // attach qty buttons
+  cartEl.querySelectorAll('button').forEach(b=> b.addEventListener('click', e=>{
+    const i = Number(b.dataset.i); const act=b.dataset.action; if(act==='+') CART[i].qty++; else { CART[i].qty--; if(CART[i].qty<=0) CART.splice(i,1); } renderCart();
+  }));
+  updateTotals();
+}
+
+function updateTotals(){
+  const sub = CART.reduce((s,c)=> s + c.price * c.qty, 0);
+  subtotalEl.textContent = fmt(sub);
+  const disc = discount; discountEl.textContent = fmt(disc);
+  const tot = Math.max(0, sub - disc);
+  totalEl.textContent = fmt(tot);
+}
+
+bayadSelect.addEventListener('change', ()=>{
+  const v=bayadSelect.value;
+  if(v==='cash'){ cashControls.style.display='block'; nonCashInfo.style.display='none'; ewalletTypes.style.display='none'; }
+  else if(v==='ewallet'){ cashControls.style.display='none'; nonCashInfo.style.display='block'; ewalletTypes.style.display='block'; }
+  else { cashControls.style.display='none'; nonCashInfo.style.display='block'; ewalletTypes.style.display='none'; }
+});
+
+completeBtn.addEventListener('click', ()=>{
+  // compute and show receipt details
+  if(CART.length===0){ alert('No items in order'); return; }
+  const sub = CART.reduce((s,c)=> s + c.price * c.qty, 0);
+  const tot = Math.max(0, sub - discount);
+  const method = bayadSelect.value;
+  let paid = tot;
+  let change = 0;
+  let methodText = '';
+  if(method==='cash'){
+    const cg = parseFloat(cashGiven.value) || 0;
+    if(cg < tot){ if(!confirm('Cash given is less than total. Proceed?')) return; }
+    paid = cg; change = cg - tot; methodText = 'Cash';
+  } else if(method==='ewallet'){
+    methodText = 'E-Wallet (' + ewalletSelect.value + ')';
+  } else { methodText = 'Card / Bank'; }
+
+  const now = new Date();
+  const receipt = {
+    id: 'RCPT' + now.getTime(),
+    date: now.toLocaleDateString(),
+    time: now.toLocaleTimeString(),
+    items: CART.map(c=>({name:c.name,qty:c.qty,price:c.price,subtotal: c.qty * c.price})),
+    subtotal: sub, discount: discount, total: tot, paid: paid, change: change, method: methodText
+  };
+  showPrintableReceipt(receipt);
+  // optionally clear cart after sale
+  // CART = []; renderCart();
+});
+
+clearBtn.addEventListener('click', ()=>{ if(confirm('Clear order?')){ CART=[]; renderCart(); cashGiven.value=''; }});
+printBtn.addEventListener('click', ()=>{
+  if(printDoc.innerHTML.trim()===''){
+    alert('No receipt to print. Complete a sale first.'); return;
+  }
+  window.print();
+});
+
+function showPrintableReceipt(r){
+  // build receipt HTML (detailed, printable)
+  let html = '';
+  html += '<div class="h">EATWIT - RECEIPT</div>';
+  html += '<div style="text-align:center;font-size:12px;margin-bottom:6px">Thank you for your purchase</div>';
+  html += '<div>Date: ' + r.date + '    Time: ' + r.time + '</div>';
+  html += '<div>Receipt #: ' + r.id + '</div>';
+  html += '<div class="line"></div>';
+  html += '<div style="font-size:13px">';
+  r.items.forEach(it=>{
+    html += `<div>${it.name} x${it.qty} <span style="float:right">${fmt(it.subtotal)}</span></div>`;
+  });
+  html += '</div>';
+  html += '<div class="line"></div>';
+  html += '<div>Subtotal <span style="float:right">' + fmt(r.subtotal) + '</span></div>';
+  html += '<div>Discount <span style="float:right">' + fmt(r.discount) + '</span></div>';
+  html += '<div style="font-weight:700">Total <span style="float:right">' + fmt(r.total) + '</span></div>';
+  html += '<div class="line"></div>';
+  html += '<div>Payment method: ' + r.method + '</div>';
+  html += '<div>Customer paid: <span style="float:right">' + fmt(r.paid) + '</span></div>';
+  html += '<div>Change: <span style="float:right">' + fmt(r.change) + '</span></div>';
+  html += '<div class="line"></div>';
+  html += '<div style="font-size:12px;text-align:center">Powered by EATWIT • Thank you!</div>';
+
+  printDoc.innerHTML = html;
+  // also show a quick visual of receipt in the panel
+  const preview = document.getElementById('printArea');
+  preview.style.display='block';
+}
+
+// clock
+function tick(){ const d=new Date(); document.getElementById('clock').textContent = d.toLocaleTimeString(); }
+setInterval(tick,1000); tick();
+
+renderItems(); renderCart();
+</script>
+</body>
+</html>
